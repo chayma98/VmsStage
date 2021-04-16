@@ -1,0 +1,160 @@
+Option Explicit
+
+' ----------------------------------------------------------------
+' Procedure Name: Alert
+' Purpose: Encender y apagar todas las alertas
+' Procedure Kind: Sub
+' Procedure Access: Public
+' Todos los parametros son opcionales, si no se definen llevan el valor de False
+' Parameter ScreenUpdate (Boolean): No se actualiza la pantalla
+' Parameter DisplayAlerts (Boolean): No muestra ninguna alerta
+' Parameter AutoSecurity (Boolean): Baja la seguridad del file
+' Parameter AskToUpdate (Boolean): No pregunta si quiere actualizar un file con links a otro libro
+' Parameter Calculation (Boolean): Deja la calculación como manual
+' Author: elberthv
+' Date: 8/26/2020
+' ----------------------------------------------------------------
+Sub Alert(Optional ScreenUpdate As Boolean = False, _
+    Optional DisplayAlerts As Boolean = False, _
+    Optional AutoSecurity As Boolean = False, _
+    Optional AskToUpdate As Boolean = False, _
+    Optional Calculation As Boolean = False)
+    Application.ScreenUpdating = ScreenUpdate
+    Application.DisplayAlerts = DisplayAlerts
+    Application.AutomationSecurity = IIf(AutoSecurity, msoAutomationSecurityForceDisable, msoAutomationSecurityByUI)
+    Application.AskToUpdateLinks = AskToUpdate
+    Application.Calculation = IIf(Calculation, xlCalculationAutomatic, xlCalculationManual)
+End Sub
+
+' ----------------------------------------------------------------
+' Procedure Name: Alertas
+' Purpose: Encener y apagar las alertas wParam True/False
+' Procedure Kind: Sub
+' Procedure Access: Public
+' Parameter IO (Boolean): Booleno con el encencido y apagado
+' Author: elberthv
+' Date: 8/26/2020
+' ----------------------------------------------------------------
+Sub Alertas(Optional IO As Boolean = False)
+    Alert IO, IO, IO, IO, IO
+End Sub
+
+' ----------------------------------------------------------------
+' Procedure Name: alertOFF
+' Purpose: Apagado de las alertas
+' Procedure Kind: Sub
+' Procedure Access: Public
+' Author: elberthv
+' Date: 8/26/2020
+' ----------------------------------------------------------------
+Sub alertOFF()
+    Alert
+End Sub
+
+' ----------------------------------------------------------------
+' Procedure Name: alertON
+' Purpose: Encendido de las alertas
+' Procedure Kind: Sub
+' Procedure Access: Public
+' Author: elberthv
+' Date: 8/26/2020
+' ----------------------------------------------------------------
+Sub alertON()
+    Alert True, True, True, True, True
+End Sub
+
+' ----------------------------------------------------------------
+' Procedure Name: Alerts
+' Purpose: Encender y apagar todas las alertas
+' Procedure Kind: Sub
+' Procedure Access: Public
+' Parameter ScreenUpdate (Boolean): No se actualiza la pantalla
+' Parameter DisplayAlerts (Boolean): No muestra ninguna alerta
+' Parameter AutoSecurity (Boolean): Baja la seguridad del file
+' Parameter AskToUpdate (Boolean): No pregunta si quiere actualizar un file con links a otro libro
+' Parameter Calculation (Boolean): Deja la calculación como manual
+' Author: elberthv
+' Date: 8/26/2020
+' ----------------------------------------------------------------
+Sub Alerts(ScreenUpdate As Boolean, DisplayAlerts As Boolean, AutoSecurity As Boolean, AskToUpdate As Boolean, Calculation As Boolean)
+    Application.ScreenUpdating = ScreenUpdate
+    Application.DisplayAlerts = DisplayAlerts
+    Application.AutomationSecurity = IIf(AutoSecurity, msoAutomationSecurityForceDisable, msoAutomationSecurityByUI)
+    Application.AskToUpdateLinks = AskToUpdate
+    Application.Calculation = IIf(Calculation, xlCalculationAutomatic, xlCalculationManual)
+End Sub
+
+' ----------------------------------------------------------------
+' Procedure Name: RemoveFilter
+' Purpose: Para remover los filtros de la hoja activa
+' Procedure Kind: Sub
+' Procedure Access: Public
+' Author: elberthv
+' Date: 8/26/2020
+' ----------------------------------------------------------------
+Sub RemoveFilter()
+    With ActiveSheet
+        If .AutoFilterMode = True And .FilterMode = True Then
+            'MsgBox "They are visible and in use"
+            Selection.AutoFilter
+        ElseIf .AutoFilterMode = True Then
+            'MsgBox "They are visible but not in use"
+            Selection.AutoFilter
+        Else
+            'MsgBox "They are not visible or in use"
+            'do nothing
+        End If
+    End With
+End Sub
+
+Sub SetValidateList(i As Range, Str As String)
+    'Delete any previous validation
+    With i.Validation
+        .Delete
+        .Add Type:=xlValidateInputOnly, AlertStyle:=xlValidAlertStop, Operator:=xlBetween
+        .IgnoreBlank = True
+        .InCellDropdown = True
+        .ShowInput = True
+        .ShowError = True
+    End With
+    
+    'Reformat the string
+    'From this: 10|20
+    'To this: 10,20
+    Str = Replace(Str, "|", ",")
+    
+    'Create the validation
+    'In the range (i) and with the list prices (Str)
+    With i.Validation
+        .Delete
+        .Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Operator:=xlBetween, Formula1:=Str
+        .IgnoreBlank = True
+        .InCellDropdown = True
+        .InputTitle = ""
+        .ErrorTitle = ""
+        .InputMessage = ""
+        .ErrorMessage = ""
+        .ShowInput = True
+        .ShowError = True
+    End With
+End Sub
+
+Sub SetConditionalFormat(i As Range, Str As String)
+    'Delete any previous conditional formating
+    i.FormatConditions.Delete
+    
+    'Add the new conditional Format, using the String (Str)
+    i.FormatConditions.Add _
+        Type:=xlTextString, _
+        String:=Str, _
+        TextOperator:=xlContains
+    
+    'Set the color for the condional Format.
+    With i.FormatConditions(1).Interior
+        .Color = RGB(255, 0, 0)
+    End With
+    i.FormatConditions(1).StopIfTrue = False
+    'Set the value for the user, to select the right price.
+    i.Value = Str
+End Sub
+
