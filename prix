@@ -1,0 +1,147 @@
+Option Explicit
+
+Public Function ParseJson()
+    'HTTP Job ### Start!
+    Dim http As New WinHttpRequest
+    Dim resp As String
+    Dim url As String
+    Dim AllValues As String
+    
+    url = "https://api.airtable.com/v0/appY6Wo3AmLHqHkjr/Materiaux?api_key=key0X6cpaPqTB0jzi"
+    http.Open "GET", url, False
+    http.Send
+    'HTTP Job ### Ending
+    
+    Dim JSON As Object
+    Set JSON = JsonConverter.ParseJson(http.ResponseText)
+    
+    Dim ArtDict As New Dictionary
+    Dim Article As class_Article
+    
+    Dim i As Long
+    Dim myDescription As String
+    Dim JsonCount As Long: JsonCount = JSON("records").count
+    Dim iName As String
+    Dim hValue As String
+    Dim lValue As String
+    Dim mValue As Currency
+    Dim cValue As String
+    Dim hCurr As Currency
+    Dim lCurr As Currency
+    Dim Sect01 As String: Sect01 = "records"
+    Dim Sect02 As String: Sect02 = "fields"
+    Dim Sect03 As String: Sect03 = "description courte"
+    Dim Sect04 As String: Sect04 = "prix unitaire HT"
+
+    For i = 1 To JsonCount
+        myDescription = JSON(Sect01)(i)(Sect02)(Sect03) 'Use Vars to put everything together
+        Set Article = New class_Article 'Every JsonCount set a new Article
+        Article.Name = JSON(Sect01)(i)(Sect02)(Sect03) 'Tell me the name
+                            
+        Article.ParsePrice JSON(Sect01)(i)(Sect02)(Sect04) 'Set High and Low price... Not important!
+        iName = Article.Name 'Store the name here
+        
+        hValue = JSON(Sect01)(i)(Sect02)(Sect04) 'Article.HighPrice 'Here store the unique value, the first time
+        lValue = Article.LowPrice 'Low price... no matter...
+        cValue = hValue & "|" & hValue 'Concatenate the value
+        mValue = CCur(JSON(Sect01)(i)(Sect02)(Sect04)) 'Take the value as Currency Data Type
+        
+        'If JSON(Sect01)(i)(Sect02)(Sect03) = "osmo 3062MAT" Then Stop
+        If Not ArtDict.Exists(myDescription) Then
+            ArtDict.Add iName, cValue
+            'Dictionary.Add Key, Value/Item
+        Else ' if the value already exist then...
+            hCurr = CCur(Split(ArtDict.Item(myDescription), "|")(0))
+            lCurr = CCur(Split(ArtDict.Item(myDescription), "|")(1))
+            'Split and take the values, previous concatenated.
+            ArtDict.Remove iName
+            'Remove the data from the dict, to add it soon.
+            
+            hCurr = IIf(hCurr > mValue, hCurr, mValue)
+            lCurr = IIf(lCurr < mValue, lCurr, mValue)
+            'Find the greatest value in the data, previously removed.
+            cValue = CStr(hCurr) & "|" & CStr(lCurr)
+            'Here concatenated, again!
+            ArtDict.Add iName, cValue
+            'Add the new data!
+        End If
+        iName = Empty
+        hValue = Empty
+        lValue = Empty
+        cValue = Empty
+        Set Article = Nothing
+    Next i
+    Set ParseJson = ArtDict
+End Function
+
+
+Sub TakeDataFromHTTP()
+'Turn off all the alerts
+alertOFF
+    'Collect the data...
+    Dim MainData As Dictionary
+    Set MainData = ParseJson
+    
+    Dim wF As WorksheetFunction: Set wF = Application.WorksheetFunction
+    'to use as a worksheet function, but shorter
+
+    Dim Sht As Worksheet: Set Sht = ThisWorkbook.Worksheets("Main")
+    Dim ColHead As String: ColHead = "4eme niveau"
+    Dim PriHead As String: PriHead = "prix unitaire extrait de timetonic"
+    Dim iWarning As String: iWarning = "Please Selecte a Price!"
+    'Sht var (worksheet) and ColHead (String), PriHead (String) and iWarning are hard coded... Be aware!
+    
+    Dim SelPrix As Range
+    
+    Sht.Activate 'Go to Main sheet
+    Dim iRow As Long
+    Dim R: R = Range("A1").SpecialCells(xlCellTypeLastCell).Row
+    'Find the last row of data
+    Dim C: C = Range("A1").SpecialCells(xlCellTypeLastCell).Column
+    'Find the last column of data
+    Dim i As Range
+    Dim MainCol As Range
+    
+    'if the head columns are not present, don't show the error,
+    'and send me into the IF
+    On Error Resume Next
+    Dim DescCol As Integer: DescCol = 0
+    Dim Prixcol As Integer: Prixcol = 0
+    DescCol = wF.Match(ColHead, Range("A1").EntireRow, False)
+    Prixcol = wF.Match(PriHead, Range("A1").EntireRow, False)
+    'This way no matter where are the head (column), if the headline exist, the
+    'function MATCH will find the column.
+    If DescCol = 0 Or Prixcol = 0 Then
+        'Tell the user the heads are not presente
+        MsgBox "The column " & ColHead & " or " & PriHead & " are not present in " & Sht.Name
+        'turn on all the alerts
+        alertON
+        'Restore the error management
+        On Error GoTo 0
+        'End and empty everything
+        End
+    End If
+    'Restore the error management
+    On Error GoTo 0
+    
+    Set MainCol = Range(Cells(1, DescCol), Cells(R, DescCol))
+    'the entire range with the descriptions what you looking for
+    
+    For Each i In MainCol
+        If i.Value = "" Then
+            'do nothin...
+        Else
+            If MainData.Exists(i.Value) Then
+            'if the description exist, AND if the string is a full match.
+                iRow = i.Row
+                'store the row inside the variable
+                SetValidateList Range(Cells(i.Row, Prixcol), Cells(i.Row, Prixcol)), MainData.Item(i.Value)
+                SetConditionalFormat Range(Cells(i.Row, Prixcol), Cells(i.Row, Prixcol)), iWarning
+                'Check the B_Functions module for more info.
+            End If
+        End If
+    Next i
+
+'at the end restore all the alerts.
+alertON
+End Sub
