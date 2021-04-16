@@ -1,0 +1,94 @@
+Option Explicit
+
+Public Definitions As New Dictionary
+
+Public Sub Main()
+    Call GetDefinitions
+    Call GetLenZData
+    Call OutputData
+End Sub
+
+Public Sub GetDefinitions()
+    Dim Definition As class_Definition
+    Dim TSheet As Worksheet: Set TSheet = Worksheets("Lecture")
+    Dim RowCounter As Long
+    For RowCounter = 2 To GetLastRow(TSheet, 1)
+        If Not Definitions.Exists(GetDefinition(TSheet.Cells(RowCounter, 1).Value)) Then
+            Set Definition = New class_Definition
+            With Definition
+                .Name = GetDefinition(TSheet.Cells(RowCounter, 1).Value)
+                .AddLenX TSheet.Cells(RowCounter, 4).Value
+                .AddLenY TSheet.Cells(RowCounter, 3).Value
+                .AddLenZ TSheet.Cells(RowCounter, 2).Value
+            End With
+            Definitions.Add Definition.Name, Definition
+        Else
+            Set Definition = Definitions(GetDefinition(TSheet.Cells(RowCounter, 1).Value))
+            With Definition
+                .AddLenX TSheet.Cells(RowCounter, 4).Value
+                .AddLenY TSheet.Cells(RowCounter, 3).Value
+                .AddLenZ TSheet.Cells(RowCounter, 2).Value
+            End With
+            Set Definitions(GetDefinition(TSheet.Cells(RowCounter, 1).Value)) = Definition
+        End If
+    Next RowCounter
+    Set Definition = Nothing
+    Set TSheet = Nothing
+End Sub
+
+Public Sub GetLenZData()
+    Dim S3 As Worksheet: Set S3 = Worksheets(3)
+    Dim Definition As class_Definition
+    Dim SearchResults As Range, TCell As Range
+    Dim DefName As String
+    Dim Index As Long, NewRow As Long
+    For Index = 0 To Definitions.count - 1
+        Set SearchResults = RangeFindAll(S3.Range("B:B"), Definitions.Keys()(Index), xlValues, xlPart)
+        If Not SearchResults Is Nothing Then
+            For Each TCell In SearchResults
+                If GetDefinition(TCell.Value) = Definitions.Keys()(Index) Then
+                    Set Definition = Definitions.Items()(Index)
+                    If Definition.LenZ.Exists(CStr(TCell.Offset(0, 3))) Then
+                        Definition.LenZ.Item(CStr(TCell.Offset(0, 3))) = Expand(TCell.Offset(1, 3), xlDown).Address
+                    Else
+                        MsgBox "Error! LenZ not defined in Definition" & vbNewLine & Definition.Name & " Row: " & TCell.Row, vbCritical
+                    End If
+                    Set Definitions.Items()(Index) = Definition
+                    Set Definition = Nothing
+                End If
+            Next TCell
+            Set TCell = Nothing
+        End If
+        Set SearchResults = Nothing
+    Next Index
+    Set S3 = Nothing
+End Sub
+
+Public Sub OutputData()
+    Dim Output As Worksheet: Set Output = GetSheet("Output")
+    Dim DataSheet As Worksheet: Set DataSheet = Worksheets(3)
+    Dim Definition As class_Definition
+    Dim Index As Long, SubIndex As Long, NewRow As Long
+    For Index = 0 To Definitions.count - 1
+        Set Definition = Definitions.Items()(Index)
+        For SubIndex = 0 To Definition.LenZ.count - 1
+            NewRow = GetLastRow(Output, 7) + 2
+            Output.Cells(NewRow, 4).Value = Definition.Name
+            Output.Cells(NewRow, 5).Value = Definition.LenZ.Keys()(SubIndex)
+            If Len(Definition.LenZ.Items()(SubIndex)) > 0 Then DataSheet.Range(Definition.LenZ.Items()(SubIndex)).Copy Output.Cells(NewRow + 1, 7)
+        Next SubIndex
+        Set Definition = Nothing
+    Next Index
+    Set Output = Nothing
+    Set DataSheet = Nothing
+End Sub
+
+Private Function GetDefinition(ByVal RawDef As String) As String
+    If Len(RawDef) = 0 Then Exit Function
+    If InStr(RawDef, "#") Then
+        GetDefinition = Mid(RawDef, 1, InStr(RawDef, "#") - 1)
+    Else
+        GetDefinition = RawDef
+    End If
+End Function
+
