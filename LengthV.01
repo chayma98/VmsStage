@@ -1,0 +1,46 @@
+Option Explicit
+
+Sub longueur()
+
+    Dim WB As Workbook, ws1 As Worksheet, ws2 As Worksheet, ws3 As Worksheet
+    Dim rngName As Range, rng As Range, C As Range
+    Dim colLongueur As Integer, iLastRow As Long
+    
+    Set WB = ThisWorkbook
+    Set ws1 = WB.Sheets("Feuil1") 'sheet that we re gonna paste longueur into
+    Set ws2 = WB.Sheets("Lecture") '<== Sheet that has raw data
+    Set ws3 = WB.Sheets("detail des ouvrages")
+ 
+    ' find column NOM DE L'ENTITÉ on sheet 2
+    Set rng = ws2.Range("A1:DS1").Find("Definition Name")
+    If rng Is Nothing Then
+        MsgBox "Could not find 'NOM DE L'ENTITÉ' on " & ws2.Name, vbCritical
+        Exit Sub
+    End If
+    ' expand to end of column
+    Set rngName = ws2.Range(rng, ws2.Cells(rows.count, rng.Column).End(xlUp))
+
+    ' find column LONGUEUR on sheet 2
+    Set rng = ws2.Range("A1:DS1").Find(ws3.Range("E2").Value)
+    If rng Is Nothing Then
+        MsgBox "Could not find 'LONGUEUR' on " & ws2.Name, vbCritical
+        Exit Sub
+    End If
+    colLongueur = rng.Column
+
+    ' scan sheet 1 col D
+    iLastRow = ws1.Cells(rows.count, "D").End(xlUp).Row
+    For Each C In ws1.Range("D1:D" & iLastRow)
+        ' find name on sheet 2
+        Set rng = rngName.Find(C.Value, LookIn:=xlValues, LookAt:=xlWhole)
+        If rng Is Nothing Then
+            C.Offset(0, 1).Value = "No Match"
+        Else
+            ' copy value from column LONGUEUR
+            C.Offset(0, 1).Value = ws2.Cells(rng.Row, colLongueur)
+        End If
+    Next
+    MsgBox "Ended"
+    
+End Sub
+
