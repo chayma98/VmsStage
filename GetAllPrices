@@ -1,0 +1,97 @@
+Option Explicit
+
+Sub prix()
+   
+    ' get json into a string
+    Dim fso, ts, s
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    Set ts = fso.OpenTextFile("c:\temp\json.txt")
+    s = ts.ReadAll
+    ts.Close
+
+    Dim dictArt As New Dictionary, oArt As Class_Article ' holds articles
+    Dim name As String, price As Currency
+    Dim JSON As Object, rec, fld
+    Set JSON = JsonConverter.ParseJson(s)
+    
+    ' parse json
+    For Each rec In JSON("records")
+        Set fld = rec("fields")
+        name = fld("description courte")
+        price = fld("prix unitaire HT")
+        
+        If dictArt.Exists(name) Then
+            dictArt(name).AddPrice price
+        Else
+            Set oArt = New Class_Article
+            oArt.name = name
+            oArt.AddPrice price
+            dictArt.Add name, oArt
+        End If
+    Next
+
+    ' result to sheet1
+    Dim key, i As Long: i = 1
+    Sheet1.Cells.Clear
+    Sheet1.Range("A1:C1") = Array("Description", "Price Count", "Price")
+    For Each key In dictArt
+        i = i + 1
+        Set oArt = dictArt(key)
+        Sheet1.Cells(i, 1) = oArt.Name
+        Sheet1.Cells(i, 2) = oArt.PriceCount
+        ' if more than once give options
+        If oArt.PriceCount > 1 Then
+            Sheet1.Cells(i, 1).Select
+            Sheet1.Cells(i, 3).Interior.Color = vbYellow
+            oArt.SelectPrice
+            If oArt.bSelected Then
+                Sheet1.Cells(i, 3) = oArt.price
+                Sheet1.Cells(i, 3).Interior.Color = xlNone
+            End If
+        Else
+            Sheet1.Cells(i, 3) = oArt.price
+        End If
+    Next
+End Sub
+
+' Class_Article
+
+Public name As String
+Public price As Currency
+Public PriceCount As Integer
+Public bSelected As Boolean
+Private prices As New Collection
+Private i As Integer
+
+Public Sub AddPrice(ByVal price As Currency)
+    PriceCount = PriceCount + 1
+    Me.price = price
+    prices.Add price, CStr(PriceCount)
+End Sub
+
+Sub SelectPrice()
+
+   Dim msg As String
+   bSelected = False
+
+   ' build option list
+   msg = name & " has " & PriceCount & " prices"
+   For i = 1 To PriceCount
+       msg = msg & vbCr & "(" & i & ") " & prices(i)
+   Next
+
+   ' user selects
+begin:
+   i = Application.InputBox(msg, "Select Price 1 to " & PriceCount, 1, Type:=1) ' int
+   
+   If i < 1 Then
+       Exit Sub
+   ElseIf i > PriceCount Then
+      GoTo begin
+   End If
+
+   ' selected price
+   price = prices(i)
+   bSelected = True
+
+End Sub
