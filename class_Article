@@ -1,0 +1,47 @@
+Option Explicit
+
+Public Name As String
+Public HighPrice As Currency
+Public LowPrice As Currency
+
+Private Sub Class_Initialize()
+    HighPrice = -922337203685477.5807@      'Set value to lowest possible value
+    LowPrice = 922337203685477.5807@        'Set value to the highest possible value
+End Sub
+
+Public Function ParsePrice(ByVal NewPrice As Currency) As Boolean
+    HighPrice = IIf(NewPrice > HighPrice, NewPrice, HighPrice)
+    LowPrice = IIf(NewPrice < LowPrice, NewPrice, LowPrice)
+End Function
+
+Public Sub ParseJson()
+Dim http As New WinHttpRequest
+Dim resp As String
+Dim url As String
+
+url = "https://api.airtable.com/v0/appY6Wo3AmLHqHkjr/Materiaux?api_key=key0X6cpaPqTB0jzi" & Fields
+http.Open "GET", url, False
+http.Send
+Dim JSON As Object
+Set JSON = JsonConverter.ParseJson(http.ResponseText)
+    'Dim RawJSON As String: RawJSON = mod_FSO.FileIO(FileRead, "C:\Users\viper\Desktop\JSON.txt")
+    'Dim JSON As Object: Set JSON = JsonConverter.ParseJSON(RawJSON)
+    Dim ArtDict As New Dictionary, Article As class_Article
+    Dim Index As Long
+    For Index = 1 To JSON("records").count
+        If Not ArtDict.Exists(JSON("records")(Index)("fields")("description courte")) Then
+            'If this article doesn't exist in the article dictionary, then create the article object and add it to the dictionary
+            Set Article = New class_Article
+            Article.Name = JSON("records")(Index)("fields")("description courte")
+            Article.ParsePrice JSON("records")(Index)("fields")("prix unitaire HT")
+            Debug.Print Article.Name, Article.HighPrice, Article.LowPrice
+            ArtDict.Add Article.Name, Article
+        Else
+            Set Article = ArtDict(JSON("records")(Index)("fields")("description courte"))
+            Article.ParsePrice JSON("records")(Index)("fields")("prix unitaire HT")
+            Debug.Print Article.Name, Article.HighPrice, Article.LowPrice
+            Set ArtDict(JSON("records")(Index)("fields")("description courte")) = Article
+        End If
+    Next Index
+End Sub
+
