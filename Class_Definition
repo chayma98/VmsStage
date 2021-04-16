@@ -1,0 +1,32 @@
+Option Explicit
+
+Public Name As String
+Public LenX As New Dictionary
+Public LenY As New Dictionary
+Public LenZ As New Dictionary
+
+Public Function GetLenX(ByVal Data As String) As String
+    If LenX.Exists(Data) Then GetLenX = LenX.Item(Data)
+End Function
+Public Function GetLenY(ByVal Data As String) As String
+    If LenY.Exists(Data) Then GetLenY = LenY.Item(Data)
+End Function
+Public Function GetLenZ(ByVal Data As String) As String
+    If LenZ.Exists(Data) Then GetLenZ = LenZ.Item(Data)
+End Function
+
+Public Function AddLenX(ByVal Data As String) As Boolean
+    Dim PrevCount As Long: PrevCount = LenX.count
+    LenX.Item(Data) = ""
+    AddLenX = Not (PrevCount = LenX.count)
+End Function
+Public Function AddLenY(ByVal Data As String) As Boolean
+    Dim PrevCount As Long: PrevCount = LenY.count
+    LenY.Item(Data) = ""
+    AddLenY = Not (PrevCount = LenY.count)
+End Function
+Public Function AddLenZ(ByVal Data As String) As Boolean
+    Dim PrevCount As Long: PrevCount = LenZ.count
+    LenZ.Item(Data) = ""
+    AddLenZ = Not (PrevCount = LenZ.count)
+End Function
