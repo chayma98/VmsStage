@@ -1,0 +1,19 @@
+Sub lecture()
+Dim ws As Worksheet, strFile As String
+
+Set ws = ActiveWorkbook.Sheets.Add
+strFile = Application.GetOpenFilename("Text Files (*.csv),*.csv", , "Please selec text file...")
+With ws.QueryTables.Add(Connection:="TEXT;" & strFile, _
+Destination:=ws.Range("A1"))
+    .TextFilePlatform = 65001
+    .TextFileParseType = xlDelimited
+    .TextFileCommaDelimiter = True
+    .Refresh
+End With
+  ws.Name = "Lecture"
+
+End Sub
+  
+
+
+
